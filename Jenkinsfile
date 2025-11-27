@@ -37,16 +37,15 @@ pipeline {
 
         stage('Deploy WAR to Tomcat') {
             steps {
-                bat '''
+                bat """
 if not exist "%TEMP%\\deploy" mkdir "%TEMP%\\deploy"
 
 rem Copy WAR file
 copy backend\\target\\*.war "%TEMP%\\deploy\\blood.war" /Y
 
 rem Deploy to Tomcat (port 7777)
-curl -u admin:admin -T "%TEMP%\\deploy\\blood.war" ^
-"http://localhost:7777/manager/text/deploy?path=/blood&update=true"
-'''
+curl -u admin:admin -T "%TEMP%\\deploy\\blood.war" "http://localhost:7777/manager/text/deploy?path=/blood^&update=true"
+"""
             }
         }
     }
