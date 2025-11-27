@@ -1,52 +1,55 @@
 pipeline {
     agent any
 
+    environment {
+        // Tomcat credentials stored in Jenkins Credentials (replace IDs accordingly)
+        TOMCAT_USER = credentials('tomcat-username')  // e.g., 'admin'
+        TOMCAT_PASS = credentials('tomcat-password')  // e.g., 'password'
+        TOMCAT_URL  = "http://localhost:7777/manager/text"
+    }
+
     stages {
-        stage('Clone Backend') {
+        stage('Checkout') {
             steps {
-                dir('backend') {
-                    git branch: 'main', url: 'https://github.com/ganesh-160905/blood-backend.git'
-                }
+                echo 'Checking out code from GitHub...'
+                git branch: 'main', url: 'https://github.com/ganesh-160905/blood-backend.git'
             }
         }
 
-        stage('Clone Frontend') {
+        stage('Build Backend WAR') {
             steps {
-                dir('frontend') {
-                    git branch: 'main', url: 'https://github.com/ganesh-160905/blood-frontend.git'
-                }
+                echo 'Building backend WAR...'
+                // On Windows, use bat instead of sh
+                bat 'mvn clean package'
             }
         }
 
-        stage('Build Backend (WAR)') {
+        stage('Archive WAR') {
             steps {
-                dir('backend') {
-                    bat 'mvn -B -DskipTests clean package'
-                }
+                echo 'Archiving WAR...'
+                archiveArtifacts artifacts: 'target/blood-backend.war', fingerprint: true
             }
         }
 
-        stage('Build Frontend') {
+        stage('Deploy to Tomcat') {
             steps {
-                dir('frontend') {
-                    bat 'npm install'
-                    bat 'npm run build'
-                }
-            }
-        }
-
-        stage('Deploy WAR to Tomcat') {
-            steps {
+                echo 'Deploying WAR to Tomcat...'
+                // Deploy WAR using Tomcat manager
                 bat """
-if not exist "%TEMP%\\deploy" mkdir "%TEMP%\\deploy"
-
-rem Copy WAR file
-copy backend\\target\\*.war "%TEMP%\\deploy\\blood.war" /Y
-
-rem Deploy to Tomcat (port 7777)
-curl -u admin:admin -T "%TEMP%\\deploy\\blood.war" "http://localhost:7777/manager/text/deploy?path=/blood^&update=true"
-"""
+                curl --upload-file target\\blood-backend.war \
+                ${TOMCAT_URL}/deploy?path=/blood-backend&update=true \
+                --user ${TOMCAT_USER}:${TOMCAT_PASS}
+                """
             }
+        }
+    }
+
+    post {
+        success {
+            echo 'Build and Deployment completed successfully!'
+        }
+        failure {
+            echo 'Build or Deployment failed!'
         }
     }
 }
