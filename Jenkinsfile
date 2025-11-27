@@ -2,6 +2,7 @@ pipeline {
     agent any
 
     stages {
+
         stage('Clone Backend') {
             steps {
                 dir('backend') {
@@ -26,7 +27,7 @@ pipeline {
             }
         }
 
-        stage('Build Frontend') {
+        stage('Build Frontend (npm build)') {
             steps {
                 dir('frontend') {
                     bat 'npm install'
@@ -35,13 +36,19 @@ pipeline {
             }
         }
 
-        stage('Deploy WAR to Tomcat') {
+        stage('Deploy to Tomcat') {
             steps {
-                // update admin:password to your Tomcat manager credentials
                 bat '''
-if not exist "%TEMP%\\deploy" mkdir "%TEMP%\\deploy"
-copy backend\\target\\*.war "%TEMP%\\deploy\\app.war" /Y
-curl -u admin:admin -T "%TEMP%\\deploy\\app.war" "http://localhost:8080/manager/text/deploy?path=/blood&update=true"
+REM Create temp deploy folder
+IF NOT EXIST "%TEMP%\\deploy" mkdir "%TEMP%\\deploy"
+
+REM Copy generated WAR file
+copy backend\\target\\*.war "%TEMP%\\deploy\\blood.war" /Y
+
+REM Deploy via Tomcat Manager API
+curl -u admin:admin ^
+     -T "%TEMP%\\deploy\\blood.war" ^
+     "http://localhost:8080/manager/text/deploy?path=/blood&update=true"
 '''
             }
         }
