@@ -1,15 +1,7 @@
 pipeline {
     agent any
 
-    environment {
-        TOMCAT_USER = "admin"
-        TOMCAT_PASS = "admin"
-        TOMCAT_PORT = "7777"
-        TOMCAT_URL  = "http://localhost:7777/manager/text"
-    }
-
     stages {
-
         stage('Clone Backend') {
             steps {
                 dir('backend') {
@@ -43,15 +35,17 @@ pipeline {
             }
         }
 
-        stage('Deploy Backend to Tomcat (/back1)') {
+        stage('Deploy WAR to Tomcat') {
             steps {
                 bat '''
-IF NOT EXIST "%TEMP%\\deploy" mkdir "%TEMP%\\deploy"
-copy backend\\target\\*.war "%TEMP%\\deploy\\back1.war" /Y
+if not exist "%TEMP%\\deploy" mkdir "%TEMP%\\deploy"
 
-curl -u admin:admin ^
-     -T "%TEMP%\\deploy\\back1.war" ^
-     "http://localhost:7777/manager/text/deploy?path=/back1&update=true"
+rem Copy WAR file
+copy backend\\target\\*.war "%TEMP%\\deploy\\blood.war" /Y
+
+rem Deploy to Tomcat (port 7777)
+curl -u admin:admin -T "%TEMP%\\deploy\\blood.war" ^
+"http://localhost:7777/manager/text/deploy?path=/blood&update=true"
 '''
             }
         }
