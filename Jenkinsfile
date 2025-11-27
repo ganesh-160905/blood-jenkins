@@ -1,6 +1,13 @@
 pipeline {
     agent any
 
+    environment {
+        TOMCAT_USER = "admin"
+        TOMCAT_PASS = "admin"
+        TOMCAT_PORT = "7777"
+        TOMCAT_URL  = "http://localhost:7777/manager/text"
+    }
+
     stages {
 
         stage('Clone Backend') {
@@ -19,7 +26,7 @@ pipeline {
             }
         }
 
-        stage('Build Backend (Maven WAR)') {
+        stage('Build Backend (WAR)') {
             steps {
                 dir('backend') {
                     bat 'mvn -B -DskipTests clean package'
@@ -27,7 +34,7 @@ pipeline {
             }
         }
 
-        stage('Build Frontend (npm build)') {
+        stage('Build Frontend') {
             steps {
                 dir('frontend') {
                     bat 'npm install'
@@ -36,19 +43,15 @@ pipeline {
             }
         }
 
-        stage('Deploy to Tomcat') {
+        stage('Deploy Backend to Tomcat (/back1)') {
             steps {
                 bat '''
-REM Create temp deploy folder
 IF NOT EXIST "%TEMP%\\deploy" mkdir "%TEMP%\\deploy"
+copy backend\\target\\*.war "%TEMP%\\deploy\\back1.war" /Y
 
-REM Copy generated WAR file
-copy backend\\target\\*.war "%TEMP%\\deploy\\blood.war" /Y
-
-REM Deploy via Tomcat Manager API
 curl -u admin:admin ^
-     -T "%TEMP%\\deploy\\blood.war" ^
-     "http://localhost:8080/manager/text/deploy?path=/blood&update=true"
+     -T "%TEMP%\\deploy\\back1.war" ^
+     "http://localhost:7777/manager/text/deploy?path=/back1&update=true"
 '''
             }
         }
