@@ -2,43 +2,35 @@ pipeline {
     agent any
 
     environment {
-        // Tomcat credentials stored in Jenkins Credentials (replace IDs accordingly)
-        TOMCAT_USER = credentials('tomcat-username')  // e.g., 'admin'
-        TOMCAT_PASS = credentials('tomcat-password')  // e.g., 'password'
-        TOMCAT_URL  = "http://localhost:7777/manager/text"
+        // Tomcat deployment URL
+        TOMCAT_URL = "http://localhost:7777/manager/text"
+        // Jenkins credential ID for Tomcat (username + password)
+        TOMCAT_CREDS = credentials('tomcat-credentials')
     }
 
     stages {
         stage('Checkout') {
             steps {
-                echo 'Checking out code from GitHub...'
+                echo "Checking out code..."
                 git branch: 'main', url: 'https://github.com/ganesh-160905/blood-backend.git'
             }
         }
 
-        stage('Build Backend WAR') {
+        stage('Build') {
             steps {
-                echo 'Building backend WAR...'
-                // On Windows, use bat instead of sh
-                bat 'mvn clean package'
-            }
-        }
-
-        stage('Archive WAR') {
-            steps {
-                echo 'Archiving WAR...'
-                archiveArtifacts artifacts: 'target/blood-backend.war', fingerprint: true
+                echo "Building Spring Boot WAR..."
+                bat 'mvn clean package -DskipTests'
             }
         }
 
         stage('Deploy to Tomcat') {
             steps {
-                echo 'Deploying WAR to Tomcat...'
-                // Deploy WAR using Tomcat manager
+                echo "Deploying WAR to Tomcat..."
+                // Using curl to deploy the WAR to Tomcat
                 bat """
-                curl --upload-file target\\blood-backend.war \
-                ${TOMCAT_URL}/deploy?path=/blood-backend&update=true \
-                --user ${TOMCAT_USER}:${TOMCAT_PASS}
+                curl --fail --upload-file target\\blood-backend.war \\
+                     "${TOMCAT_URL}/deploy?path=/blood-backend&update=true" \\
+                     --user ${TOMCAT_CREDS_USR}:${TOMCAT_CREDS_PSW}
                 """
             }
         }
@@ -46,7 +38,7 @@ pipeline {
 
     post {
         success {
-            echo 'Build and Deployment completed successfully!'
+            echo 'Deployment successful!'
         }
         failure {
             echo 'Build or Deployment failed!'
