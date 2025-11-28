@@ -2,54 +2,53 @@ pipeline {
     agent any
 
     environment {
-        // Change these based on your Jenkins credentials
         GIT_CREDENTIALS = 'git-credentials'
-        TOMCAT_USER = credentials('tomcat-credentials-username')
-        TOMCAT_PASS = credentials('tomcat-credentials-password')
+        TOMCAT_USER = admin
+        TOMCAT_PASS = admin
         TOMCAT_URL = "http://localhost:7777/manager/text"
     }
 
     stages {
-
         stage('Checkout Backend') {
             steps {
-                git branch: 'main',
-                    credentialsId: "${GIT_CREDENTIALS}",
-                    url: 'https://github.com/ganesh-160905/blood-backend.git'
+                dir('backend') {
+                    git branch: 'main', url: 'https://github.com/ganesh-160905/blood-backend.git', credentialsId: "${GIT_CREDENTIALS}"
+                }
             }
         }
 
         stage('Build Backend WAR') {
             steps {
-                bat "mvn clean package -DskipTests"
+                dir('backend') {
+                    bat "mvn -B -DskipTests clean package"
+                }
             }
         }
 
         stage('Deploy WAR to Tomcat') {
             steps {
-                echo "Deploying WAR to Tomcat..."
-                bat """
-                    curl -u ${TOMCAT_USER}:${TOMCAT_PASS} ^
-                    --upload-file target/blood-backend.war ^
-                    "${TOMCAT_URL}/deploy?path=/blood-backend&update=true"
-                """
+                dir('backend') {
+                    withCredentials([string(credentialsId: 'tomcat-credentials-username', variable: 'TOMCAT_USER'), string(credentialsId: 'tomcat-credentials-password', variable: 'TOMCAT_PASS')]) {
+                        bat 'curl -u %TOMCAT_USER%:%TOMCAT_PASS% --upload-file target\\blood-backend.war "%TOMCAT_URL%/deploy?path=/blood-backend&update=true"'
+                    }
+                }
             }
         }
 
         stage('Checkout Frontend') {
             steps {
-                git branch: 'main',
-                    credentialsId: "${GIT_CREDENTIALS}",
-                    url: 'https://github.com/ganesh-160905/blood-frontend.git'
+                dir('frontend') {
+                    git branch: 'main', url: 'https://github.com/ganesh-160905/blood-frontend.git', credentialsId: "${GIT_CREDENTIALS}"
+                }
             }
         }
 
         stage('Build Frontend') {
             steps {
-                bat """
-                    npm install
-                    npm run build
-                """
+                dir('frontend') {
+                    bat "npm install"
+                    bat "npm run build"
+                }
             }
         }
 
