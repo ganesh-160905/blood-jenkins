@@ -3,8 +3,8 @@ pipeline {
 
     environment {
         GIT_CREDENTIALS = 'git-credentials'
-        TOMCAT_USER = admin
-        TOMCAT_PASS = admin
+        TOMCAT_USER = 'admin'
+        TOMCAT_PASS = 'admin'
         TOMCAT_URL = "http://localhost:7777/manager/text"
     }
 
@@ -28,9 +28,7 @@ pipeline {
         stage('Deploy WAR to Tomcat') {
             steps {
                 dir('backend') {
-                    withCredentials([string(credentialsId: 'tomcat-credentials-username', variable: 'TOMCAT_USER'), string(credentialsId: 'tomcat-credentials-password', variable: 'TOMCAT_PASS')]) {
-                        bat 'curl -u %TOMCAT_USER%:%TOMCAT_PASS% --upload-file target\\blood-backend.war "%TOMCAT_URL%/deploy?path=/blood-backend&update=true"'
-                    }
+                    bat 'curl -u %TOMCAT_USER%:%TOMCAT_PASS% --upload-file target\\blood-backend.war "%TOMCAT_URL%/deploy?path=/blood-backend&update=true"'
                 }
             }
         }
